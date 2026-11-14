@@ -1,4 +1,4 @@
-NewSwipe does not collect personal information or send it off your device. The app has no internet permission at all, so what you type technically cannot be sent anywhere. The only permission this app requests is vibration, for key vibration.
+NewSwipe does not collect personal information, and it sends nothing off your device except when you turn on the translate button and tap it. The app requests two permissions: vibration, for key vibration, and internet, for the translate button. The internet is used only when you tap the translate button, and that button is off by default.
 
 ## Information stored on your device
 For keyboard features, the information below is kept in on-device storage that only this app can read. It is deleted when you uninstall the app.
@@ -22,6 +22,9 @@ On password and email fields, word suggestions, autocorrect and word learning ar
 
 ## Backup files
 Files created with 'Import & export settings' are saved only where you choose. If you include learned words, emoji and clipboard history (text only, no images), the file contains personal content, so you can encrypt the whole file with a password when exporting (AES-256-GCM, with the key derived from the password by PBKDF2). If you forget the password, the file can't be opened. Be careful when sharing a file exported without a password.
+
+## Translate (optional)
+You can use it by turning on the 'Translate button' in toolbar button customization and entering your own Google Cloud Translation API key in settings. When you tap the translate button, the text in the field at that moment (or the selected text, if you selected some) is sent to the Google Cloud Translation API, and the translation replaces it in place. Google Cloud's privacy policy and terms apply to the text that is sent. Nothing is translated in password fields. If you don't tap the translate button, no text is sent. The API key is stored only in this device's app storage and is not included in settings export files.
 
 ## Voice input
 The voice input button on the toolbar switches to another voice input app installed on your device (e.g. Google voice typing). While you use voice input, that app's privacy policy applies.

@@ -3447,6 +3447,49 @@ public final class SettingsActivity extends Activity {
         return row;
     }
 
+    private void askTranslateKey() {
+        EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        input.setHint("AIza...");
+        int pad = Ui.dp(this, 20);
+        LinearLayout box = new LinearLayout(this);
+        box.setPadding(pad, Ui.dp(this, 8), pad, 0);
+        box.addView(input, matchWrap());
+        AppTheme.dialogBuilder(this)
+                .setTitle(L.t("Google Cloud Translation API 키", "Google Cloud Translation API key"))
+                .setMessage(L.t("Cloud 콘솔에서 만든 API 키를 붙여 넣으세요. 키는 'Cloud Translation API만 허용'으로 제한해 두세요. "
+                        + "비워 두고 저장하면 키를 지웁니다.",
+                        "Paste the API key you created in the Cloud console. Restrict the key to the Cloud Translation API only. "
+                        + "Save it empty to remove the key."))
+                .setView(box)
+                .setPositiveButton(L.t("저장", "Save"), (d, w) -> {
+                    prefs.raw().edit().putString(Prefs.TRANSLATE_API_KEY, input.getText().toString().trim()).apply();
+                    d.dismiss();
+                    recreate();
+                })
+                .setNegativeButton(L.t("취소", "Cancel"), null)
+                .show();
+    }
+
+    private void askTranslateLanguage(String title, String key, String current) {
+        String[] names = new String[Translator.LANGUAGES.length];
+        int checked = -1;
+        for (int i = 0; i < names.length; i++) {
+            names[i] = Translator.name(Translator.LANGUAGES[i]);
+            if (Translator.LANGUAGES[i][0].equalsIgnoreCase(current)) checked = i;
+        }
+        AppTheme.dialogBuilder(this)
+                .setTitle(title)
+                .setSingleChoiceItems(names, checked, (d, which) -> {
+                    prefs.raw().edit().putString(key, Translator.LANGUAGES[which][0]).apply();
+                    d.dismiss();
+                    recreate();
+                })
+                .setNegativeButton(L.t("취소", "Cancel"), null)
+                .show();
+    }
+
     private void askAccentHex(int current) {
         EditText input = new EditText(this);
         input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
@@ -3536,7 +3579,8 @@ public final class SettingsActivity extends Activity {
         }
 
         LinearLayout about = section(L.t("개인 정보", "Privacy"));
-        about.addView(note(L.t("모든 처리는 기기 안에서만 하며 인터넷을 쓰지 않습니다. 비밀번호·이메일 입력란에서는 학습을 하지 않습니다.", "Everything is processed on your device, without the internet. Nothing is learned on password or email fields.")));
+        about.addView(note(L.t("단어 추천과 학습은 기기 안에서만 처리하며 인터넷을 쓰지 않습니다 (번역 버튼은 따로 쓸 때만 인터넷을 씁니다). 비밀번호·이메일 입력란에서는 학습을 하지 않습니다.",
+                "Word suggestions and learning are processed on your device, without the internet (only the translate button uses the internet, and only when you use it). Nothing is learned on password or email fields.")));
 
         buildDictionaryPack();
     }
@@ -4026,6 +4070,28 @@ public final class SettingsActivity extends Activity {
     }
 
     private void buildTools() {
+        LinearLayout translate = section(L.t("번역", "Translate"));
+        translate.addView(note(L.t("Google Cloud Translation API로 입력란의 글을 번역합니다. 도구 막대 버튼 사용자화에서 '번역 버튼'을 켜면 "
+                + "도구 막대에 나타납니다. 번역 버튼을 누른 순간의 글만 Google로 전송되며, 그 밖의 입력은 전송하지 않습니다.",
+                "Translates the text in the field with the Google Cloud Translation API. Turn on the 'Translate button' in toolbar button customization "
+                + "to show it on the toolbar. Only the text at the moment you tap the button is sent to Google; nothing else you type is sent.")));
+        String savedKey = prefs.translateApiKey();
+        String keyState = savedKey == null || savedKey.isEmpty() ? L.t("입력 안 됨", "not set")
+                : L.t("입력됨 (…", "set (…") + savedKey.substring(Math.max(0, savedKey.length() - 4)) + ")";
+        translate.addView(button(L.t("API 키 · ", "API key · ") + keyState, v -> askTranslateKey()));
+        translate.addView(button(L.t("번역할 언어 · ", "Translate into · ") + Translator.languageName(prefs.translateTarget()),
+                v -> askTranslateLanguage(L.t("번역할 언어", "Translate into"), Prefs.TRANSLATE_TARGET, prefs.translateTarget())));
+        translate.addView(button(L.t("이미 그 언어일 때 번역할 언어 · ", "If already in that language, translate into · ") + Translator.languageName(prefs.translateAlt()),
+                v -> askTranslateLanguage(L.t("이미 그 언어일 때 번역할 언어", "If already in that language, translate into"), Prefs.TRANSLATE_ALT, prefs.translateAlt())));
+        translate.addView(note(L.t("글이 '번역할 언어'로 쓰여 있으면(자동 감지) 두 번째 언어로 번역합니다. 이때는 같은 글을 두 번 보내 "
+                + "글자 수가 두 배로 셉니다. Google Cloud Translation은 월 50만 자까지 무료이며 결제 계정 등록이 필요합니다. "
+                + "한 번에 " + Translator.MAX_CHARS + "자까지 번역하며, Cloud 콘솔에서 일일 할당량을 걸어 두면 안전합니다. "
+                + "API 키는 이 기기의 앱 저장소에만 저장되고 설정 내보내기에는 담기지 않습니다.",
+                "If the text is already in the 'Translate into' language (auto-detected), it is translated into the second language instead. "
+                + "In that case the same text is sent twice, so it counts double. Google Cloud Translation is free up to 500,000 characters a month and needs a billing account. "
+                + "Up to " + Translator.MAX_CHARS + " characters are translated at a time; setting a daily quota in the Cloud console keeps costs safe. "
+                + "The API key is stored only in this device's app storage and is not included in settings exports.")));
+
         LinearLayout clip = section(L.t("클립보드", "Clipboard"));
         View clipImagesToggle = toggle(L.t("이미지 저장", "Save images"), L.t("복사한 이미지도 클립보드에 저장합니다 (최대 " + ClipboardHistory.MAX_IMAGES + "개).",
                         "Also saves copied images to the clipboard (up to " + ClipboardHistory.MAX_IMAGES + ").") ,

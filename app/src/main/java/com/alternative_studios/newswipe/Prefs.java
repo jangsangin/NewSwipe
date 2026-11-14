@@ -252,6 +252,10 @@ public final class Prefs {
     public static final String TOOL_ORDER = "tool_order";   // 도구 막대 버튼 순서와 붙는 쪽 (ToolbarButtons)
     public static final String TOOL_UNDO = "tool_undo";   // 도구 막대의 실행 취소 버튼
     public static final String TOOL_ONE_HAND = "tool_one_hand";   // 도구 막대의 한 손 모드 버튼
+    public static final String TOOL_TRANSLATE = "tool_translate"; // 도구 막대의 번역 버튼 (기본 꺼짐)
+    public static final String TRANSLATE_API_KEY = "translate_api_key";   // Google Cloud Translation API 키 (설정 백업에서 제외)
+    public static final String TRANSLATE_TARGET = "translate_target";     // 번역할 언어 (기본 en)
+    public static final String TRANSLATE_ALT = "translate_alt";           // 글이 이미 목표 언어일 때 번역할 언어 (기본 ko)
 
     /** 한 손 모드 상태: "off" | "left" | "right". 키보드에서 켜고 끄는 상태라 설정 내보내기에서는 뺀다. */
     public static final String ONE_HAND = "one_hand";
@@ -475,7 +479,7 @@ public final class Prefs {
             DUBEOLSIK_SHIFT_HIDDEN, KOREAN_SHIFT_FN, BOTTOM_EMOJI_KEY, BOTTOM_CLIPBOARD_KEY, BOTTOM_CURSOR_KEY, BOTTOM_VOICE_KEY};
     /** 도구 막대 버튼 사용자화 화면의 값. */
     private static final String[] TOOL_BUTTON_VALUES = {TOOL_ORDER, TOOL_CLIPBOARD, TOOL_EMOJI, VOICE_KEY, TOOL_UNDO,
-            TOOL_SETTINGS, TOOL_ONE_HAND, TOOL_HIDE};
+            TOOL_SETTINGS, TOOL_ONE_HAND, TOOL_HIDE, TOOL_TRANSLATE};
 
     /** 키보드 사용자화의 한 설정 범위: 목록의 되돌리기에 보이는 이름(null이면 보이지 않음)과 그 범위의 값 키·키 앞부분. */
     private static final class EditorScope {
@@ -512,7 +516,7 @@ public final class Prefs {
                     PAD_BOTTOM, KEY_TEXT_SIZE, KEY_RADIUS, KEY_GAP_X, KEY_GAP_Y, KEY_SHADOW,
                     KEY_SHADOW_STRENGTH, KEY_PREVIEW), NONE),
             new EditorScope(AREA_SCOPES[0], L.t("도구 막대", "Toolbar"), concat(TOOL_BUTTON_VALUES, TOOLBAR, TOOLBAR_BOTTOM, TOOLBAR_HEIGHT,
-                    TOOL_BUTTON_SIZE, PORTRAIT_PREFIX + TOOLBAR_FOLLOW_BLOCKS), keys(AREA_PAD_PREFIX + PAD_AREAS[0] + "_", "swipe_toolbar_bar_")),
+                    TOOL_BUTTON_SIZE, TRANSLATE_TARGET, TRANSLATE_ALT, PORTRAIT_PREFIX + TOOLBAR_FOLLOW_BLOCKS), keys(AREA_PAD_PREFIX + PAD_AREAS[0] + "_", "swipe_toolbar_bar_")),
             new EditorScope(AREA_SCOPES[1], L.t("숫자 줄", "Number row"), keys(NUMBER_ROW, NUMBER_ROW_HEIGHT, NUMBER_HINT_HIDDEN),
                     keys(AREA_PAD_PREFIX + PAD_AREAS[1] + "_")),
             // 글자 키: 세 자판이 함께 쓰는 값(높이·길게 누르기·밀기·여백)과 한글·영어 글자 키에만 있는 값.
@@ -1477,11 +1481,20 @@ public final class Prefs {
             case com.alternative_studios.newswipe.keyboard.ToolbarButtons.UNDO: return TOOL_UNDO;
             case com.alternative_studios.newswipe.keyboard.ToolbarButtons.SETTINGS: return TOOL_SETTINGS;
             case com.alternative_studios.newswipe.keyboard.ToolbarButtons.ONE_HAND: return TOOL_ONE_HAND;
+            case com.alternative_studios.newswipe.keyboard.ToolbarButtons.TRANSLATE: return TOOL_TRANSLATE;
             default: return TOOL_HIDE;
         }
     }
 
-    public boolean toolShown(String id) { return sp.getBoolean(toolShownKey(id), true); }
+    /** 번역 버튼은 인터넷으로 글을 보내는 기능이라 직접 켜기 전에는 숨긴다. */
+    public boolean toolShown(String id) {
+        boolean def = !com.alternative_studios.newswipe.keyboard.ToolbarButtons.TRANSLATE.equals(id);
+        return sp.getBoolean(toolShownKey(id), def);
+    }
+
+    public String translateApiKey() { return sp.getString(TRANSLATE_API_KEY, ""); }
+    public String translateTarget() { return sp.getString(TRANSLATE_TARGET, "en"); }
+    public String translateAlt() { return sp.getString(TRANSLATE_ALT, "ko"); }
 
     public void setToolShown(String id, boolean shown) { sp.edit().putBoolean(toolShownKey(id), shown).apply(); }
 

@@ -1,5 +1,5 @@
 diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
-index ba7d2d1..dfe4779 100644
+index 46f513b..373032d 100644
 --- a/app/src/main/AndroidManifest.xml
 +++ b/app/src/main/AndroidManifest.xml
 @@ -1,8 +1,10 @@
@@ -12,8 +12,8 @@ index ba7d2d1..dfe4779 100644
 +    <!-- 번역 버튼: 사용자가 번역 버튼을 눌렀을 때만 그 글을 Google Cloud Translation API로 보낸다. -->
 +    <uses-permission android:name="android.permission.INTERNET" />
  
-     <!-- 음성 입력 버튼이 기기에 설치된 음성 입력기(예: Google 음성 입력)를 찾을 수 있게 한다. -->
-     <queries>
+     <!-- 액티비티를 세로 고정(screenOrientation="portrait")하면 이 기능이 '필수'로 자동 선언되어
+          가로 화면 전용 기기(일부 태블릿·크롬북·데스크톱·XR)에서 설치가 막힌다. 선택사항으로 표시해 둔다. -->
 diff --git a/app/src/main/assets/guide/en/privacy.txt b/app/src/main/assets/guide/en/privacy.txt
 index 5c8ebb4..a1647d6 100644
 --- a/app/src/main/assets/guide/en/privacy.txt
@@ -55,36 +55,36 @@ index 41c76c0..211c125 100644
  도구 막대의 음성 입력 버튼은 기기에 설치된 다른 음성 입력기(예: Google 음성 입력)로 전환합니다. 음성 입력 중에는 그 음성 입력기의 개인정보 처리방침이 적용됩니다.
  
 diff --git a/app/src/main/java/com/alternative_studios/newswipe/NewSwipeIME.java b/app/src/main/java/com/alternative_studios/newswipe/NewSwipeIME.java
-index 61f71df..1435d38 100644
+index ebbc1ea..79d7edd 100644
 --- a/app/src/main/java/com/alternative_studios/newswipe/NewSwipeIME.java
 +++ b/app/src/main/java/com/alternative_studios/newswipe/NewSwipeIME.java
-@@ -118,7 +118,7 @@ public final class NewSwipeIME extends InputMethodService implements KeyboardVie
+@@ -120,7 +120,7 @@ public final class NewSwipeIME extends InputMethodService implements KeyboardVie
      private FrameLayout topSlot;
      private SwipeStrip toolbar;
      private IconButton clipboardButton, emojiButton, settingsButton, hideButton;
--    private IconButton voiceButton, undoButton, oneHandButton;
-+    private IconButton voiceButton, undoButton, oneHandButton, translateButton;
+-    private IconButton voiceButton, undoButton, oneHandButton, floatButton, textEditButton;
++    private IconButton voiceButton, undoButton, oneHandButton, floatButton, textEditButton, translateButton;
      /**
       * 한 손 모드 배치: body(가로) = [column(도구 막대·검색 결과·자판) | sideStrip(반대편 빈 곳)], 그 아래 liftSpace.
       * 한 손 모드가 꺼져 있으면 column만 꽉 차게 들어가고 sideStrip은 숨긴다. liftSpace는 가로 모드·폴더블 내부 화면의
-@@ -877,6 +877,8 @@ public final class NewSwipeIME extends InputMethodService implements KeyboardVie
-         bar.addView(voiceButton);
-         undoButton = toolButton(Icons.UNDO, L.t("실행 취소", "Undo"), v -> undo());
+@@ -1029,6 +1029,8 @@ public final class NewSwipeIME extends InputMethodService implements KeyboardVie
          bar.addView(undoButton);
+         textEditButton = toolButton(Icons.TEXT_EDIT, L.t("텍스트 편집", "Text editing"), v -> toggleTextEdit());
+         bar.addView(textEditButton);
 +        translateButton = toolButton(Icons.TRANSLATE, L.t("번역", "Translate"), v -> translateField());
 +        bar.addView(translateButton);
          toolSpacer = new View(this);
          bar.addView(toolSpacer, new LinearLayout.LayoutParams(0, 1, 1f));
          // 방금 복사한 내용 칩은 빈 공간 자리에 뜬다 (도구 버튼은 그대로 둔다).
-@@ -926,6 +928,7 @@ public final class NewSwipeIME extends InputMethodService implements KeyboardVie
+@@ -1082,6 +1084,7 @@ public final class NewSwipeIME extends InputMethodService implements KeyboardVie
              case ToolbarButtons.EMOJI: return emojiButton;
              case ToolbarButtons.VOICE: return voiceButton;
              case ToolbarButtons.UNDO: return undoButton;
 +            case ToolbarButtons.TRANSLATE: return translateButton;
              case ToolbarButtons.SETTINGS: return settingsButton;
              case ToolbarButtons.ONE_HAND: return oneHandButton;
-             default: return hideButton;
-@@ -4739,6 +4742,114 @@ public final class NewSwipeIME extends InputMethodService implements KeyboardVie
+             case ToolbarButtons.FLOAT: return floatButton;
+@@ -5929,6 +5932,114 @@ public final class NewSwipeIME extends InputMethodService implements KeyboardVie
          }
      }
  
@@ -200,10 +200,10 @@ index 61f71df..1435d38 100644
          InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
          if (imm != null) {
 diff --git a/app/src/main/java/com/alternative_studios/newswipe/Prefs.java b/app/src/main/java/com/alternative_studios/newswipe/Prefs.java
-index 27a13f9..2f7cf06 100644
+index 2ea5462..6633c92 100644
 --- a/app/src/main/java/com/alternative_studios/newswipe/Prefs.java
 +++ b/app/src/main/java/com/alternative_studios/newswipe/Prefs.java
-@@ -269,6 +269,10 @@ public final class Prefs {
+@@ -330,6 +330,10 @@ public final class Prefs {
      public static final String TOOL_ORDER = "tool_order";   // 도구 막대 버튼 순서와 붙는 쪽 (ToolbarButtons)
      public static final String TOOL_UNDO = "tool_undo";   // 도구 막대의 실행 취소 버튼
      public static final String TOOL_ONE_HAND = "tool_one_hand";   // 도구 막대의 한 손 모드 버튼
@@ -214,16 +214,16 @@ index 27a13f9..2f7cf06 100644
  
      /** 한 손 모드 상태: "off" | "left" | "right". 키보드에서 켜고 끄는 상태라 설정 내보내기에서는 뺀다. */
      public static final String ONE_HAND = "one_hand";
-@@ -535,7 +539,7 @@ public final class Prefs {
-             DUBEOLSIK_SHIFT_HIDDEN, KOREAN_SHIFT_FN, BOTTOM_EMOJI_KEY, BOTTOM_CLIPBOARD_KEY, BOTTOM_CURSOR_KEY, BOTTOM_VOICE_KEY};
+@@ -883,7 +887,7 @@ public final class Prefs {
+             SYMBOL_GLOBE_KEY};
      /** 도구 막대 버튼 사용자화 화면의 값. */
      private static final String[] TOOL_BUTTON_VALUES = {TOOL_ORDER, TOOL_CLIPBOARD, TOOL_EMOJI, VOICE_KEY, TOOL_UNDO,
--            TOOL_SETTINGS, TOOL_ONE_HAND, TOOL_HIDE};
-+            TOOL_SETTINGS, TOOL_ONE_HAND, TOOL_HIDE, TOOL_TRANSLATE};
+-            TOOL_SETTINGS, TOOL_ONE_HAND, TOOL_FLOAT, TOOL_TEXT_EDIT, TOOL_HIDE};
++            TOOL_SETTINGS, TOOL_ONE_HAND, TOOL_FLOAT, TOOL_TEXT_EDIT, TOOL_HIDE, TOOL_TRANSLATE};
  
      /** 키보드 사용자화의 한 설정 범위: 목록의 되돌리기에 보이는 이름(null이면 보이지 않음)과 그 범위의 값 키·키 앞부분. */
      private static final class EditorScope {
-@@ -572,7 +576,7 @@ public final class Prefs {
+@@ -920,7 +924,7 @@ public final class Prefs {
                      PAD_BOTTOM, KEY_TEXT_SIZE, KEY_RADIUS, KEY_GAP_X, KEY_GAP_Y, KEY_SHADOW,
                      KEY_SHADOW_STRENGTH, KEY_PREVIEW), NONE),
              new EditorScope(AREA_SCOPES[0], L.t("도구 막대", "Toolbar"), concat(TOOL_BUTTON_VALUES, TOOLBAR, TOOLBAR_BOTTOM, TOOLBAR_HEIGHT,
@@ -232,33 +232,36 @@ index 27a13f9..2f7cf06 100644
              new EditorScope(AREA_SCOPES[1], L.t("숫자 줄", "Number row"), keys(NUMBER_ROW, NUMBER_ROW_HEIGHT, NUMBER_HINT_HIDDEN),
                      keys(AREA_PAD_PREFIX + PAD_AREAS[1] + "_")),
              // 글자 키: 세 자판이 함께 쓰는 값(높이·길게 누르기·밀기·여백)과 한글·영어 글자 키에만 있는 값.
-@@ -1610,11 +1614,20 @@ public final class Prefs {
-             case com.alternative_studios.newswipe.keyboard.ToolbarButtons.UNDO: return TOOL_UNDO;
-             case com.alternative_studios.newswipe.keyboard.ToolbarButtons.SETTINGS: return TOOL_SETTINGS;
+@@ -2126,16 +2130,22 @@ public final class Prefs {
              case com.alternative_studios.newswipe.keyboard.ToolbarButtons.ONE_HAND: return TOOL_ONE_HAND;
+             case com.alternative_studios.newswipe.keyboard.ToolbarButtons.FLOAT: return TOOL_FLOAT;
+             case com.alternative_studios.newswipe.keyboard.ToolbarButtons.TEXT_EDIT: return TOOL_TEXT_EDIT;
 +            case com.alternative_studios.newswipe.keyboard.ToolbarButtons.TRANSLATE: return TOOL_TRANSLATE;
              default: return TOOL_HIDE;
          }
      }
  
--    public boolean toolShown(String id) { return sp.getBoolean(toolShownKey(id), true); }
-+    /** 번역 버튼은 인터넷으로 글을 보내는 기능이라 직접 켜기 전에는 숨긴다. */
-+    public boolean toolShown(String id) {
-+        boolean def = !com.alternative_studios.newswipe.keyboard.ToolbarButtons.TRANSLATE.equals(id);
-+        return sp.getBoolean(toolShownKey(id), def);
-+    }
-+
++    /** 떠 있는 키보드·텍스트 편집·번역 버튼은 나중에 생기거나 인터넷을 쓰므로, 켜야 보인다. */
+     public boolean toolShown(String id) {
+-        // 떠 있는 키보드·텍스트 편집 버튼은 나중에 생겨, 켜야 보인다.
+         return sp.getBoolean(toolShownKey(id), !com.alternative_studios.newswipe.keyboard.ToolbarButtons.FLOAT.equals(id)
+-                && !com.alternative_studios.newswipe.keyboard.ToolbarButtons.TEXT_EDIT.equals(id));
++                && !com.alternative_studios.newswipe.keyboard.ToolbarButtons.TEXT_EDIT.equals(id)
++                && !com.alternative_studios.newswipe.keyboard.ToolbarButtons.TRANSLATE.equals(id));
+     }
+ 
 +    public String translateApiKey() { return sp.getString(TRANSLATE_API_KEY, ""); }
 +    public String translateTarget() { return sp.getString(TRANSLATE_TARGET, "en"); }
 +    public String translateAlt() { return sp.getString(TRANSLATE_ALT, "ko"); }
- 
++
      public void setToolShown(String id, boolean shown) { sp.edit().putBoolean(toolShownKey(id), shown).apply(); }
  
+ 
 diff --git a/app/src/main/java/com/alternative_studios/newswipe/SettingsActivity.java b/app/src/main/java/com/alternative_studios/newswipe/SettingsActivity.java
-index de00c06..0ef52f4 100644
+index 265cb84..005ac18 100644
 --- a/app/src/main/java/com/alternative_studios/newswipe/SettingsActivity.java
 +++ b/app/src/main/java/com/alternative_studios/newswipe/SettingsActivity.java
-@@ -3522,6 +3522,49 @@ public final class SettingsActivity extends Activity {
+@@ -3266,6 +3266,49 @@ public final class SettingsActivity extends Activity {
          return row;
      }
  
@@ -308,7 +311,7 @@ index de00c06..0ef52f4 100644
      private void askAccentHex(int current) {
          EditText input = new EditText(this);
          input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-@@ -3611,7 +3654,8 @@ public final class SettingsActivity extends Activity {
+@@ -3355,7 +3398,8 @@ public final class SettingsActivity extends Activity {
          }
  
          LinearLayout about = section(L.t("개인 정보", "Privacy"));
@@ -318,7 +321,7 @@ index de00c06..0ef52f4 100644
  
          buildDictionaryPack();
      }
-@@ -4252,6 +4296,28 @@ public final class SettingsActivity extends Activity {
+@@ -3996,6 +4040,28 @@ public final class SettingsActivity extends Activity {
      }
  
      private void buildTools() {
@@ -348,15 +351,15 @@ index de00c06..0ef52f4 100644
          View clipImagesToggle = toggle(L.t("이미지 저장", "Save images"), clipImagesDesc(),
                  prefs.clipboardImages(), this::onClipImagesChanged);
 diff --git a/app/src/main/java/com/alternative_studios/newswipe/SettingsBackup.java b/app/src/main/java/com/alternative_studios/newswipe/SettingsBackup.java
-index dfed2a5..38143a1 100644
+index f672ea7..3dabc49 100644
 --- a/app/src/main/java/com/alternative_studios/newswipe/SettingsBackup.java
 +++ b/app/src/main/java/com/alternative_studios/newswipe/SettingsBackup.java
-@@ -41,7 +41,8 @@ public final class SettingsBackup {
- 
+@@ -42,7 +42,8 @@ public final class SettingsBackup {
      private static boolean excluded(String key) {
          return Prefs.RECENT_EMOJI.equals(key) || Prefs.PINNED_EMOJI.equals(key) || Prefs.LANGUAGE.equals(key)
--                || Prefs.ONE_HAND.equals(key) || Prefs.ONBOARDING_DONE.equals(key);
-+                || Prefs.ONE_HAND.equals(key) || Prefs.ONBOARDING_DONE.equals(key)
+                 || Prefs.ONE_HAND.equals(key) || key.startsWith(Prefs.FLOAT_ON_PREFIX)   // 한 손 모드·떠 있는 키보드의 켜짐 상태
+-                || Prefs.ONBOARDING_DONE.equals(key);
++                || Prefs.ONBOARDING_DONE.equals(key)
 +                || Prefs.TRANSLATE_API_KEY.equals(key);   // API 키는 백업 파일에 담지 않는다
      }
  
@@ -498,18 +501,18 @@ index 0000000..dd95fe5
 +    }
 +}
 diff --git a/app/src/main/java/com/alternative_studios/newswipe/keyboard/Icons.java b/app/src/main/java/com/alternative_studios/newswipe/keyboard/Icons.java
-index d20d600..31ea9b8 100644
+index c7e3b70..f3ac984 100644
 --- a/app/src/main/java/com/alternative_studios/newswipe/keyboard/Icons.java
 +++ b/app/src/main/java/com/alternative_studios/newswipe/keyboard/Icons.java
 @@ -54,6 +54,7 @@ public final class Icons {
      public static final int PASTE = 43;           // 붙여넣기 (아래 화살표가 든 클립보드)
      public static final int SELECT_ALL = 44;      // 전체 선택 (점선 테두리 안의 네모)
      public static final int CHEVRON_UP = 45;      // 위 꺾쇠 (HIDE를 뒤집은 것: 접은 미리보기 펼치기)
-+    public static final int TRANSLATE = 9046;       // 번역 (Gboard 번역 아이콘처럼 文과 A)
- 
-     private static final Path path = new Path();
-     private static final RectF oval = new RectF();
-@@ -186,6 +187,26 @@ public final class Icons {
++    public static final int TRANSLATE = 9046;     // 번역 (Gboard 번역 아이콘처럼 文과 A)
+     public static final int FLOAT = 46;           // 떠 있는 키보드 (휴대폰 화면 가운데에 뜬 작은 자판)
+     // 텍스트 편집 창. 방향이 있는 아이콘은 위쪽을 향한 모양 하나를 그려 돌린다 (오른쪽 = 90도, 시계 방향).
+     public static final int TEXT_EDIT = 47;       // 텍스트 편집 (I자 커서 양옆의 꺾쇠)
+@@ -225,6 +226,26 @@ public final class Icons {
                  c.drawArc(oval, 0, 180, false, p);
                  c.drawLine(12, 17.5f, 12, 21, p);
                  break;
@@ -537,21 +540,21 @@ index d20d600..31ea9b8 100644
                  // 톱니바퀴: 톱니 8개를 한 붓으로 잇고(톱니 끝·골은 원호), 가운데에 구멍.
                  float outer = 9.6f, inner = 7.4f, halfTop = 10f, halfBase = 15f;
 diff --git a/app/src/main/java/com/alternative_studios/newswipe/keyboard/ToolbarButtons.java b/app/src/main/java/com/alternative_studios/newswipe/keyboard/ToolbarButtons.java
-index 54a3111..5c0b8a8 100644
+index 94435f5..a05ae08 100644
 --- a/app/src/main/java/com/alternative_studios/newswipe/keyboard/ToolbarButtons.java
 +++ b/app/src/main/java/com/alternative_studios/newswipe/keyboard/ToolbarButtons.java
 @@ -11,11 +11,11 @@ import java.util.List;
   */
  public final class ToolbarButtons {
      public static final String CLIPBOARD = "clipboard", EMOJI = "emoji", VOICE = "voice", UNDO = "undo",
--            SETTINGS = "settings", HIDE = "hide", ONE_HAND = "onehand";
-+            SETTINGS = "settings", HIDE = "hide", ONE_HAND = "onehand", TRANSLATE = "translate";
+-            SETTINGS = "settings", HIDE = "hide", ONE_HAND = "onehand", FLOAT = "float", TEXT_EDIT = "textedit";
++            SETTINGS = "settings", HIDE = "hide", ONE_HAND = "onehand", FLOAT = "float", TEXT_EDIT = "textedit", TRANSLATE = "translate";
      /** 기본 배치. */
--    public static final String[] DEFAULT_LEFT = {CLIPBOARD, EMOJI, VOICE, UNDO};
-+    public static final String[] DEFAULT_LEFT = {CLIPBOARD, EMOJI, VOICE, UNDO, TRANSLATE};
-     public static final String[] DEFAULT_RIGHT = {ONE_HAND, SETTINGS, HIDE};
--    public static final String[] ALL = {CLIPBOARD, EMOJI, VOICE, UNDO, ONE_HAND, SETTINGS, HIDE};
-+    public static final String[] ALL = {CLIPBOARD, EMOJI, VOICE, UNDO, TRANSLATE, ONE_HAND, SETTINGS, HIDE};
+-    public static final String[] DEFAULT_LEFT = {CLIPBOARD, EMOJI, VOICE, UNDO, TEXT_EDIT};
++    public static final String[] DEFAULT_LEFT = {CLIPBOARD, EMOJI, VOICE, UNDO, TEXT_EDIT, TRANSLATE};
+     public static final String[] DEFAULT_RIGHT = {ONE_HAND, FLOAT, SETTINGS, HIDE};
+-    public static final String[] ALL = {CLIPBOARD, EMOJI, VOICE, UNDO, TEXT_EDIT, ONE_HAND, FLOAT, SETTINGS, HIDE};
++    public static final String[] ALL = {CLIPBOARD, EMOJI, VOICE, UNDO, TEXT_EDIT, TRANSLATE, ONE_HAND, FLOAT, SETTINGS, HIDE};
  
      private ToolbarButtons() {
      }
@@ -561,9 +564,9 @@ index 54a3111..5c0b8a8 100644
              case HIDE: return L.t("키보드 숨기기 버튼", "Hide keyboard button");
 +            case TRANSLATE: return L.t("번역 버튼", "Translate button");
              case ONE_HAND: return L.t("한 손 모드 버튼", "One-handed mode button");
-             default: return id;
-         }
-@@ -38,6 +39,8 @@ public final class ToolbarButtons {
+             case FLOAT: return L.t("떠 있는 키보드 버튼", "Floating keyboard button");
+             case TEXT_EDIT: return L.t("텍스트 편집 버튼", "Text editing button");
+@@ -40,6 +41,8 @@ public final class ToolbarButtons {
      public static String hint(String id) {
          switch (id) {
              case VOICE: return L.t("기기의 음성 입력(예: Google 음성 입력)을 사용합니다.", "Uses your device's voice input (e.g. Google voice typing).");
@@ -572,10 +575,10 @@ index 54a3111..5c0b8a8 100644
              case UNDO: return L.t("입력란에 Ctrl+Z를 보냅니다. 앱이 지원하면 방금 한 입력이나 지우기를 되돌립니다.", "Sends Ctrl+Z to the field. If the app supports it, undoes what you just typed or deleted.");
              case HIDE: return L.t("외장 키보드를 연결해 도구 막대만 보일 때는 뒤집혀 '키보드 보이기' 버튼이 됩니다. 누르면 자판 전체가 보입니다.", "When a physical keyboard is connected and only the toolbar is shown, it flips into a 'Show keyboard' button. Tap it to show the whole keyboard.");
              case ONE_HAND: return L.t("누르면 한 손 모드를 켜고 끕니다. 왼쪽·오른쪽으로 밀면 그쪽으로 쏠린 한 손 모드가 됩니다.", "Tap to turn one-handed mode on or off. Swipe left or right to shift it to that side.");
-@@ -53,6 +56,7 @@ public final class ToolbarButtons {
-             case UNDO: return Icons.UNDO;
-             case SETTINGS: return Icons.SETTINGS;
+@@ -59,6 +62,7 @@ public final class ToolbarButtons {
              case ONE_HAND: return Icons.ONE_HAND;
+             case FLOAT: return Icons.FLOAT;
+             case TEXT_EDIT: return Icons.TEXT_EDIT;
 +            case TRANSLATE: return Icons.TRANSLATE;
              default: return Icons.HIDE;
          }
